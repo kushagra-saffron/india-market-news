@@ -1,0 +1,125 @@
+# India Market News
+
+NSE equity news and corporate actions from [Zerodha Markets](https://zerodha.com/markets/stocks/), stored in **Supabase** for UI consumption. Fetched automatically twice daily at **8 AM and 8 PM IST** via GitHub Actions.
+
+## Architecture
+
+```
+GitHub repo (code + ticker list)
+        │
+        ▼
+GitHub Actions (8 AM / 8 PM IST)
+        │
+        ▼
+Zerodha Markets HTML scrape
+        │
+        ▼
+Deduplication (content_hash)
+        │
+        ▼
+Supabase `market_news` schema
+        │
+        ▼
+Your UI (read via Supabase client)
+```
+
+**Data lives in Supabase, not GitHub.** GitHub only stores code, workflows, and the ticker CSV.
+
+## Supabase
+
+| Item | Value |
+|------|-------|
+| Project | `pocketedge` (ap-south-1) |
+| URL | `https://zweqxjeuwwfrlpbuuayg.supabase.co` |
+| Schema | `market_news` |
+
+> A dedicated Supabase project could not be created (free tier limit: 2 active projects). News data uses an isolated `market_news` schema in the existing PocketEdge project.
+
+### Tables
+
+| Table | Purpose |
+|-------|---------|
+| `market_news.news_items` | Deduplicated news (90-day retention) |
+| `market_news.corporate_actions` | Dividends, results, bonus, etc. |
+| `market_news.tickers` | NSE symbol reference from `EQUITY_L.csv` |
+| `market_news.fetch_runs` | Job history and stats |
+
+### UI views
+
+- `market_news.latest_news` — news from last 90 days, newest first
+- `market_news.ticker_corporate_actions` — corporate actions by ticker
+
+### Deduplication
+
+News: `SHA256(ticker + normalized_title + published_at)`  
+Corporate actions: `SHA256(ticker + event_type + event_date)`
+
+Duplicates are ignored on upsert via unique `content_hash` constraints.
+
+## Local setup
+
+```bash
+cd india-market-news
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+
+# Dry run (no Supabase)
+india-market-news --dry-run --limit 20
+
+# Full run (requires Supabase secrets)
+export SUPABASE_URL="https://zweqxjeuwwfrlpbuuayg.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+india-market-news
+```
+
+## GitHub Actions secrets
+
+Add these in **Settings → Secrets → Actions**:
+
+| Secret | Value |
+|--------|-------|
+| `SUPABASE_URL` | `https://zweqxjeuwwfrlpbuuayg.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | From Supabase Dashboard → Settings → API |
+
+## Schedule
+
+| IST | UTC (cron) |
+|-----|------------|
+| 8:00 AM | 02:30 |
+| 8:00 PM | 14:30 |
+
+Cron: `30 2,14 * * *`
+
+Manual runs: **Actions → Fetch market news → Run workflow**
+
+## Ticker list
+
+`data/EQUITY_L.csv` — NSE equity list (~2,049 EQ series symbols).
+
+Symbol mapping for Zerodha URLs:
+- `BAJAJ-AUTO` → `BAJAJ_AUTO`
+- `TATAMOTORS` → `TMPV`
+
+## UI example (Supabase JS)
+
+```javascript
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  'https://zweqxjeuwwfrlpbuuayg.supabase.co',
+  'YOUR_ANON_KEY'
+)
+
+// Latest news for a ticker
+const { data } = await supabase
+  .schema('market_news')
+  .from('latest_news')
+  .select('*')
+  .eq('ticker', 'HDFCBANK')
+  .limit(20)
+```
+
+## License
+
+MIT
