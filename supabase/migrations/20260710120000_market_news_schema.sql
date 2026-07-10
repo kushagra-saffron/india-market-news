@@ -145,3 +145,7 @@ GRANT EXECUTE ON FUNCTION market_news.purge_old_news(INTEGER) TO service_role;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA market_news
     GRANT SELECT ON TABLES TO anon, authenticated;
+
+-- Expose schema to PostgREST (Supabase REST API)
+ALTER ROLE authenticator SET pgrst.db_schemas = 'public, graphql_public, market_news';
+NOTIFY pgrst, 'reload config';
