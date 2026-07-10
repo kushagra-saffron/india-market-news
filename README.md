@@ -31,21 +31,21 @@ Your UI (read via Supabase client)
 |------|-------|
 | Project | `india-market-news` (`imrcllmpldvjoyjyluhr`, ap-northeast-1) |
 | URL | `https://imrcllmpldvjoyjyluhr.supabase.co` |
-| Schema | `market_news` |
+| Schema | `public` (tables prefixed `mn_`) |
 
 ### Tables
 
 | Table | Purpose |
 |-------|---------|
-| `market_news.news_items` | Deduplicated news (90-day retention) |
-| `market_news.corporate_actions` | Dividends, results, bonus, etc. |
-| `market_news.tickers` | NSE symbol reference from `EQUITY_L.csv` |
-| `market_news.fetch_runs` | Job history and stats |
+| `mn_news_items` | Deduplicated news (90-day retention) |
+| `mn_corporate_actions` | Dividends, results, bonus, etc. |
+| `mn_tickers` | NSE symbol reference from `EQUITY_L.csv` |
+| `mn_fetch_runs` | Job history and stats |
 
 ### UI views
 
-- `market_news.latest_news` — news from last 90 days, newest first
-- `market_news.ticker_corporate_actions` — corporate actions by ticker
+- `mn_latest_news` — news from last 90 days, newest first
+- `mn_ticker_corporate_actions` — corporate actions by ticker
 
 ### Deduplication
 
@@ -111,8 +111,7 @@ const supabase = createClient(
 
 // Latest news for a ticker
 const { data } = await supabase
-  .schema('market_news')
-  .from('latest_news')
+  .from('mn_latest_news')
   .select('*')
   .eq('ticker', 'HDFCBANK')
   .limit(20)

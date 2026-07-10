@@ -13,6 +13,13 @@ logger = logging.getLogger(__name__)
 
 RETENTION_DAYS = 90
 
+# Tables live in public schema (mn_ prefix) for reliable PostgREST access.
+TABLE_TICKERS = "mn_tickers"
+TABLE_FETCH_RUNS = "mn_fetch_runs"
+TABLE_NEWS = "mn_news_items"
+TABLE_CORP = "mn_corporate_actions"
+RPC_PURGE = "mn_purge_old_news"
+
 
 class SupabaseStore:
     def __init__(self, client: Client):
@@ -26,14 +33,8 @@ class SupabaseStore:
 
     def start_fetch_run(self, run_type: str) -> str:
         row = (
-            self.client.schema("market_news")
-            .table("fetch_runs")
-            .insert(
-                {
-                    "run_type": run_type,
-                    "status": "running",
-                }
-            )
+            self.client.table(TABLE_FETCH_RUNS)
+            .insert({"run_type": run_type, "status": "running"})
             .execute()
         )
         return row.data[0]["id"]
@@ -52,9 +53,7 @@ class SupabaseStore:
             "error_message": error_message,
             **stats,
         }
-        self.client.schema("market_news").table("fetch_runs").update(payload).eq(
-            "id", run_id
-        ).execute()
+        self.client.table(TABLE_FETCH_RUNS).update(payload).eq("id", run_id).execute()
 
     def upsert_news(self, items: list[NewsItem]) -> tuple[int, int]:
         if not items:
@@ -73,15 +72,14 @@ class SupabaseStore:
             for item in items
         ]
 
-        before = self._count_news_hashes([row["content_hash"] for row in rows])
-        self.client.schema("market_news").table("news_items").upsert(
+        before = self._count_hashes(TABLE_NEWS, [row["content_hash"] for row in rows])
+        self.client.table(TABLE_NEWS).upsert(
             rows,
             on_conflict="content_hash",
             ignore_duplicates=True,
         ).execute()
         inserted = max(len(rows) - before, 0)
-        skipped = len(rows) - inserted
-        return inserted, skipped
+        return inserted, len(rows) - inserted
 
     def upsert_corporate_actions(
         self, items: list[CorporateActionItem]
@@ -100,22 +98,17 @@ class SupabaseStore:
             for item in items
         ]
 
-        before = self._count_corp_hashes([row["content_hash"] for row in rows])
-        self.client.schema("market_news").table("corporate_actions").upsert(
+        before = self._count_hashes(TABLE_CORP, [row["content_hash"] for row in rows])
+        self.client.table(TABLE_CORP).upsert(
             rows,
             on_conflict="content_hash",
             ignore_duplicates=True,
         ).execute()
         inserted = max(len(rows) - before, 0)
-        skipped = len(rows) - inserted
-        return inserted, skipped
+        return inserted, len(rows) - inserted
 
     def apply_retention(self, days: int = RETENTION_DAYS) -> int:
-        result = (
-            self.client.schema("market_news")
-            .rpc("purge_old_news", {"retention_days": days})
-            .execute()
-        )
+        result = self.client.rpc(RPC_PURGE, {"retention_days": days}).execute()
         return int(result.data or 0)
 
     def sync_tickers(self, tickers: list[dict[str, str]]) -> None:
@@ -131,34 +124,23 @@ class SupabaseStore:
             }
             for row in tickers
         ]
-        self.client.schema("market_news").table("tickers").upsert(
-            rows,
-            on_conflict="symbol",
-        ).execute()
+        self.client.table(TABLE_TICKERS).upsert(rows, on_conflict="symbol").execute()
 
-    def _count_news_hashes(self, hashes: list[str]) -> int:
+    def _count_hashes(self, table: str, hashes: list[str]) -> int:
         if not hashes:
             return 0
-        result = (
-            self.client.schema("market_news")
-            .table("news_items")
-            .select("content_hash")
-            .in_("content_hash", hashes)
-            .execute()
-        )
-        return len(result.data or [])
-
-    def _count_corp_hashes(self, hashes: list[str]) -> int:
-        if not hashes:
-            return 0
-        result = (
-            self.client.schema("market_news")
-            .table("corporate_actions")
-            .select("content_hash")
-            .in_("content_hash", hashes)
-            .execute()
-        )
-        return len(result.data or [])
+        total = 0
+        chunk_size = 100
+        for offset in range(0, len(hashes), chunk_size):
+            chunk = hashes[offset : offset + chunk_size]
+            result = (
+                self.client.table(table)
+                .select("content_hash")
+                .in_("content_hash", chunk)
+                .execute()
+            )
+            total += len(result.data or [])
+        return total
 
 
 def snapshots_to_items(
