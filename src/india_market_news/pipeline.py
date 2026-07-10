@@ -47,12 +47,12 @@ def run_pipeline(
     store: SupabaseStore,
     run_type: str = "scheduled",
     include_corporate_actions: bool = True,
-    max_workers: int = 20,
+    max_workers: int = 15,
     batch_size: int = 500,
     batch_pause_seconds: float = 5.0,
     request_delay: float = 0.0,
-    micro_batch_size: int = 20,
-    micro_batch_pause: float = 2.0,
+    micro_batch_size: int = 15,
+    micro_batch_pause: float = 3.0,
     series: str | None = "EQ",
 ) -> dict:
     ticker_rows = load_tickers_from_csv(ticker_csv, series=series)
@@ -116,10 +116,10 @@ def run_pipeline(
                 len(failed_tickers),
             )
             retry_fetcher = NewsFetcher(
-                max_workers=10,
+                max_workers=8,
                 request_delay=0.0,
-                micro_batch_size=10,
-                micro_batch_pause=4.0,
+                micro_batch_size=8,
+                micro_batch_pause=5.0,
                 retry_count=5,
             )
             # Adjust stats: subtract prior failures; retry pass will recount.

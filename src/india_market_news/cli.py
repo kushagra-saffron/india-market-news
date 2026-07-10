@@ -32,8 +32,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--workers",
         type=int,
-        default=20,
-        help="Parallel fetch workers per micro-batch (default: 20)",
+        default=15,
+        help="Parallel fetch workers per micro-batch (default: 15)",
     )
     parser.add_argument(
         "--batch-size",
@@ -56,14 +56,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--micro-batch-size",
         type=int,
-        default=20,
-        help="Parallel tickers per Zerodha micro-batch (default: 20)",
+        default=15,
+        help="Parallel tickers per Zerodha micro-batch (default: 15)",
     )
     parser.add_argument(
         "--micro-batch-pause",
         type=float,
-        default=2.0,
-        help="Seconds to pause between micro-batches (default: 2)",
+        default=3.0,
+        help="Seconds to pause between micro-batches (default: 3)",
     )
     parser.add_argument(
         "--dry-run",

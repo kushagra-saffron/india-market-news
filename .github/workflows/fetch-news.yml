@@ -28,7 +28,7 @@ jobs:
           india-market-news \
             --ticker-csv data/EQUITY_L.csv \
             --series EQ \
-            --workers 20 \
-            --micro-batch-size 20 \
-            --micro-batch-pause 2 \
+            --workers 15 \
+            --micro-batch-size 15 \
+            --micro-batch-pause 3 \
             --request-delay 0

@@ -60,13 +60,13 @@ Zerodha rate-limits burst traffic. The fetcher uses **micro-batches**:
 
 | Setting | Value |
 |---------|-------|
-| Parallel requests per micro-batch | 20 |
-| Pause between micro-batches | 2 seconds |
+| Parallel requests per micro-batch | 15 |
+| Pause between micro-batches | 3 seconds |
 | Supabase write batch size | 500 tickers |
 
-~2,049 EQ tickers complete in **~10–12 minutes** on GitHub Actions (verified: 500/500 with zero 429s).
+~2,049 EQ tickers complete in **~15–18 minutes** on GitHub Actions.
 
-Failed tickers are retried once at 10 parallel / 4s pause.
+Failed tickers are retried once at 8 parallel / 5s pause.
 
 ## Local setup
 

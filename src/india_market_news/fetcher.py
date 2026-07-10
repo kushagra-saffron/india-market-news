@@ -59,11 +59,11 @@ class NewsFetcher:
     def __init__(
         self,
         *,
-        max_workers: int = 20,
+        max_workers: int = 15,
         retry_count: int = 4,
         request_delay: float = 0.0,
-        micro_batch_size: int = 20,
-        micro_batch_pause: float = 2.0,
+        micro_batch_size: int = 15,
+        micro_batch_pause: float = 3.0,
     ):
         self.max_workers = max(1, max_workers)
         self.retry_count = retry_count

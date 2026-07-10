@@ -26,7 +26,7 @@ jobs:
         run: |
           python scripts/probe_micro_batch.py \
             --count ${{ inputs.count || 500 }} \
-            --workers 20 \
-            --micro-batch-size 20 \
-            --micro-batch-pause 2 \
+            --workers 15 \
+            --micro-batch-size 15 \
+            --micro-batch-pause 3 \
             --request-delay 0
