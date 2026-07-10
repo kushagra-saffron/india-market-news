@@ -32,32 +32,32 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--workers",
         type=int,
-        default=8,
-        help="Parallel fetch workers (default: 8)",
+        default=20,
+        help="Parallel fetch workers per micro-batch (default: 20)",
     )
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=100,
-        help="Tickers per batch (default: 100)",
+        default=500,
+        help="Tickers per Supabase write batch (default: 500)",
     )
     parser.add_argument(
         "--batch-pause",
         type=float,
-        default=20.0,
-        help="Seconds to pause between batches (default: 20)",
+        default=5.0,
+        help="Seconds to pause between Supabase write batches (default: 5)",
     )
     parser.add_argument(
         "--request-delay",
         type=float,
-        default=0.25,
-        help="Minimum seconds between Zerodha requests (default: 0.25, use 0 with micro-batches)",
+        default=0.0,
+        help="Minimum seconds between Zerodha requests (default: 0 with micro-batches)",
     )
     parser.add_argument(
         "--micro-batch-size",
         type=int,
-        default=0,
-        help="Parallel tickers per micro-batch (default: 0 = disabled)",
+        default=20,
+        help="Parallel tickers per Zerodha micro-batch (default: 20)",
     )
     parser.add_argument(
         "--micro-batch-pause",

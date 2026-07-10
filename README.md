@@ -54,6 +54,20 @@ Corporate actions: `SHA256(ticker + event_type + event_date)`
 
 Duplicates are ignored on upsert via unique `content_hash` constraints.
 
+## Fetch strategy
+
+Zerodha rate-limits burst traffic. The fetcher uses **micro-batches**:
+
+| Setting | Value |
+|---------|-------|
+| Parallel requests per micro-batch | 20 |
+| Pause between micro-batches | 2 seconds |
+| Supabase write batch size | 500 tickers |
+
+~2,049 EQ tickers complete in **~10–12 minutes** on GitHub Actions (verified: 500/500 with zero 429s).
+
+Failed tickers are retried once at 10 parallel / 4s pause.
+
 ## Local setup
 
 ```bash
@@ -63,12 +77,15 @@ source .venv/bin/activate
 pip install -e .
 
 # Dry run (no Supabase)
-india-market-news --dry-run --limit 20
+india-market-news --dry-run --limit 100
 
 # Full run (requires Supabase secrets)
 export SUPABASE_URL="https://imrcllmpldvjoyjyluhr.supabase.co"
 export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 india-market-news
+
+# Or use the helper script (loads .env)
+./scripts/run_fetch_local.sh
 ```
 
 ## GitHub Actions secrets

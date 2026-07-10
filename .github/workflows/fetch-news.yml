@@ -9,7 +9,7 @@ on:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -27,10 +27,4 @@ jobs:
         run: |
           india-market-news \
             --ticker-csv data/EQUITY_L.csv \
-            --series EQ \
-            --workers 20 \
-            --micro-batch-size 20 \
-            --micro-batch-pause 2 \
-            --request-delay 0 \
-            --batch-size 200 \
-            --batch-pause 10
+            --series EQ

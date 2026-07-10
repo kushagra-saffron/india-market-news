@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run the full news fetch locally (fast, no GitHub Actions rate limits).
+# Run the full news fetch locally using the production micro-batch settings.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -17,8 +17,4 @@ fi
 
 exec "$ROOT/.venv/bin/india-market-news" \
   --ticker-csv data/EQUITY_L.csv \
-  --series EQ \
-  --workers 8 \
-  --batch-size 100 \
-  --batch-pause 10 \
-  --request-delay 0.25
+  --series EQ
