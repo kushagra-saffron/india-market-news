@@ -1,5 +1,5 @@
 -- India market news schema (Zerodha → Supabase)
--- Project: pocketedge (ap-south-1)
+-- Project: india-market-news (imrcllmpldvjoyjyluhr, ap-northeast-1)
 -- Retention: 90 days
 
 CREATE SCHEMA IF NOT EXISTS market_news;

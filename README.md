@@ -29,11 +29,9 @@ Your UI (read via Supabase client)
 
 | Item | Value |
 |------|-------|
-| Project | `pocketedge` (ap-south-1) |
-| URL | `https://zweqxjeuwwfrlpbuuayg.supabase.co` |
+| Project | `india-market-news` (`imrcllmpldvjoyjyluhr`, ap-northeast-1) |
+| URL | `https://imrcllmpldvjoyjyluhr.supabase.co` |
 | Schema | `market_news` |
-
-> A dedicated Supabase project could not be created (free tier limit: 2 active projects). News data uses an isolated `market_news` schema in the existing PocketEdge project.
 
 ### Tables
 
@@ -68,7 +66,7 @@ pip install -e .
 india-market-news --dry-run --limit 20
 
 # Full run (requires Supabase secrets)
-export SUPABASE_URL="https://zweqxjeuwwfrlpbuuayg.supabase.co"
+export SUPABASE_URL="https://imrcllmpldvjoyjyluhr.supabase.co"
 export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 india-market-news
 ```
@@ -79,7 +77,7 @@ Add these in **Settings → Secrets → Actions**:
 
 | Secret | Value |
 |--------|-------|
-| `SUPABASE_URL` | `https://zweqxjeuwwfrlpbuuayg.supabase.co` |
+| `SUPABASE_URL` | `https://imrcllmpldvjoyjyluhr.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | From Supabase Dashboard → Settings → API |
 
 ## Schedule
@@ -107,7 +105,7 @@ Symbol mapping for Zerodha URLs:
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
-  'https://zweqxjeuwwfrlpbuuayg.supabase.co',
+  'https://imrcllmpldvjoyjyluhr.supabase.co',
   'YOUR_ANON_KEY'
 )
 
