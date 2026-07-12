@@ -4,12 +4,20 @@ import html as htmlmod
 import re
 
 import html2text
+import logging
 
-_CONVERTER = html2text.HTML2Text()
-_CONVERTER.body_width = 0
-_CONVERTER.ignore_images = True
-_CONVERTER.protect_links = True
-_CONVERTER.unicode_snob = True
+logger = logging.getLogger(__name__)
+
+
+def _new_converter() -> html2text.HTML2Text:
+    # Fresh instance per call — HTML2Text keeps mutable parser state and is
+    # not safe to share across ThreadPoolExecutor workers.
+    converter = html2text.HTML2Text()
+    converter.body_width = 0
+    converter.ignore_images = True
+    converter.protect_links = True
+    converter.unicode_snob = True
+    return converter
 
 _URL_LIKE = re.compile(r"^(?:https?://|mailto:|/|#)", re.IGNORECASE)
 _TABLE_SEP = re.compile(r"^\|?\s*:?-{2,}")
@@ -154,5 +162,11 @@ def html_to_markdown(fragment: str) -> str:
         return ""
     cleaned = _strip_disclaimer(fragment)
     cleaned = _normalize_html(cleaned)
-    markdown = _CONVERTER.handle(cleaned)
+    try:
+        markdown = _new_converter().handle(cleaned)
+    except (AssertionError, ValueError) as exc:
+        # Malformed HTML occasionally trips html.parser; keep a plain-text fallback.
+        logger.warning("html2text failed (%s); falling back to stripped text", exc or type(exc).__name__)
+        text = re.sub(r"<[^>]+>", " ", cleaned)
+        return htmlmod.unescape(re.sub(r"\s+", " ", text)).strip()
     return _cleanup_markdown(markdown)

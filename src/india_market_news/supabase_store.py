@@ -98,11 +98,26 @@ class SupabaseStore:
         stats: dict[str, Any],
         error_message: str | None = None,
     ) -> None:
+        # Only persist columns that exist on mn_fetch_runs (ignore extras like
+        # raw_files_saved which are useful in logs/artifacts only).
+        known = {
+            "tickers_total",
+            "tickers_ok",
+            "tickers_failed",
+            "news_seen",
+            "news_inserted",
+            "news_skipped",
+            "corp_seen",
+            "corp_inserted",
+            "corp_skipped",
+            "retention_deleted",
+            "duration_seconds",
+        }
         payload = {
             "status": status,
             "completed_at": datetime.now(timezone.utc).isoformat(),
             "error_message": error_message,
-            **stats,
+            **{key: value for key, value in stats.items() if key in known},
         }
         self.client.table(TABLE_FETCH_RUNS).update(payload).eq("id", run_id).execute()
 
