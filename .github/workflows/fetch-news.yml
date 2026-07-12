@@ -25,10 +25,21 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          mkdir -p raw
           india-market-news \
             --ticker-csv data/EQUITY_L.csv \
             --series EQ \
             --workers 15 \
             --micro-batch-size 15 \
             --micro-batch-pause 3 \
-            --request-delay 0
+            --request-delay 0 \
+            --raw-dir raw
+
+      - name: Upload news+corp HTML sections (temporary parser cache)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zerodha-sections-${{ github.run_id }}
+          path: raw/
+          if-no-files-found: warn
+          retention-days: 14

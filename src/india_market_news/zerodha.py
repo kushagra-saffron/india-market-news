@@ -72,6 +72,8 @@ def _parse_published_at(raw_date: str) -> datetime | None:
 def parse_zerodha_page(html: str, *, exchange: str, ticker: str, url: str) -> TickerSnapshot:
     company_name = _parse_company_name(html, ticker)
     tcm_id = _parse_tcm_id(html)
+    raw_news_html = _section(html, "news")
+    raw_corp_html = _section(html, "corporate_ations")
     news = _parse_news(html, ticker=ticker, company_name=company_name)
     corporate_actions = _parse_corporate_actions(html, ticker=ticker)
 
@@ -88,6 +90,8 @@ def parse_zerodha_page(html: str, *, exchange: str, ticker: str, url: str) -> Ti
         news=news,
         corporate_actions=corporate_actions,
         error=error,
+        raw_news_html=raw_news_html,
+        raw_corp_html=raw_corp_html,
     )
 
 

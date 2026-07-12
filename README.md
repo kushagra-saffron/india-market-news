@@ -70,6 +70,20 @@ Zerodha rate-limits burst traffic. The fetcher uses **micro-batches**:
 
 Failed tickers are retried once at 8 parallel / 5s pause.
 
+## Temporary raw cache (GitHub Artifacts)
+
+Each fetch also saves only Zerodha `#news` + `#corporate_ations` HTML sections and uploads them as a GitHub Actions artifact (`zerodha-sections-<run_id>`, retained **14 days**).
+
+- **Normal path:** parse → Supabase (source of truth for the UI)
+- **Parser fix path:** download artifact → `--reprocess-from raw` → upsert Supabase (no Zerodha calls)
+
+```bash
+# Local reprocess after downloading an artifact zip into ./raw
+india-market-news --reprocess-from raw
+```
+
+Or run Actions → **Reprocess from artifact** and paste the fetch run ID.
+
 ## Local setup
 
 ```bash

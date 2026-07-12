@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from india_market_news.fetcher import NewsFetcher
-from india_market_news.pipeline import run_pipeline
+from india_market_news.pipeline import run_pipeline, run_reprocess_pipeline
 from india_market_news.supabase_store import SupabaseStore, snapshots_to_items
 from india_market_news.tickers import load_ticker_symbols
 
@@ -66,6 +66,18 @@ def main(argv: list[str] | None = None) -> int:
         help="Seconds to pause between micro-batches (default: 3)",
     )
     parser.add_argument(
+        "--raw-dir",
+        type=Path,
+        default=None,
+        help="Save #news + #corporate_ations HTML sections here (for artifact/reprocess)",
+    )
+    parser.add_argument(
+        "--reprocess-from",
+        type=Path,
+        default=None,
+        help="Re-parse saved section HTML from this directory (no Zerodha fetch)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Fetch only, do not write to Supabase",
@@ -94,6 +106,35 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(message)s",
     )
 
+    if args.reprocess_from:
+        if args.dry_run:
+            from india_market_news.raw_store import load_raw_snapshots
+
+            snapshots = load_raw_snapshots(args.reprocess_from)
+            if args.limit:
+                snapshots = snapshots[: args.limit]
+            news, corp = snapshots_to_items(snapshots)
+            print(
+                json.dumps(
+                    {
+                        "tickers": len(snapshots),
+                        "ok": sum(1 for snapshot in snapshots if not snapshot.error),
+                        "news_seen": len(news),
+                        "corp_seen": len(corp),
+                    },
+                    indent=2,
+                )
+            )
+            return 0
+
+        stats = run_reprocess_pipeline(
+            raw_dir=args.reprocess_from,
+            store=SupabaseStore.from_env(),
+            include_corporate_actions=not args.skip_corporate_actions,
+        )
+        print(json.dumps(stats, indent=2))
+        return 0
+
     series = None if args.series.upper() == "ALL" else args.series
     tickers = load_ticker_symbols(args.ticker_csv, series=series)
     if args.limit:
@@ -106,6 +147,12 @@ def main(argv: list[str] | None = None) -> int:
             micro_batch_size=args.micro_batch_size,
             micro_batch_pause=args.micro_batch_pause,
         ).fetch_tickers(tickers)
+        if args.raw_dir:
+            from india_market_news.raw_store import save_snapshot_sections
+
+            args.raw_dir.mkdir(parents=True, exist_ok=True)
+            for snapshot in snapshots:
+                save_snapshot_sections(snapshot, args.raw_dir)
         news, corp = snapshots_to_items(snapshots)
         rate_limited = sum(
             1 for snapshot in snapshots if snapshot.error and "429" in snapshot.error
@@ -131,6 +178,7 @@ def main(argv: list[str] | None = None) -> int:
         micro_batch_size=args.micro_batch_size,
         micro_batch_pause=args.micro_batch_pause,
         series=series,
+        raw_dir=args.raw_dir,
     )
     print(json.dumps(stats, indent=2))
     return 0

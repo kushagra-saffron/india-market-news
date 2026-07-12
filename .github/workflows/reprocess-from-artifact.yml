@@ -1,0 +1,38 @@
+name: Reprocess from artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "GitHub Actions run ID that produced the zerodha-sections artifact"
+        required: true
+        type: string
+
+jobs:
+  reprocess:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Download section HTML artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: zerodha-sections-${{ inputs.run_id }}
+          path: raw
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.run_id }}
+
+      - name: Reprocess raw sections → Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          india-market-news --reprocess-from raw

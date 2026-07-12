@@ -35,3 +35,5 @@ class TickerSnapshot:
     news: list[NewsItem] = field(default_factory=list)
     corporate_actions: list[CorporateActionItem] = field(default_factory=list)
     error: str | None = None
+    raw_news_html: str = ""
+    raw_corp_html: str = ""
