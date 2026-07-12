@@ -34,11 +34,35 @@ def _dedupe_rows(rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         if existing is None:
             seen[row_key] = row
             continue
-        if key == "content_hash" and len(row.get("summary", "")) > len(
-            existing.get("summary", "")
-        ):
+        # Prefer richer news summaries when present.
+        if len(row.get("summary", "") or "") > len(existing.get("summary", "") or ""):
+            seen[row_key] = row
+            continue
+        # Prefer richer corporate-action payloads.
+        row_score = len(row.get("details", "") or "") + len(row.get("document_url", "") or "")
+        existing_score = len(existing.get("details", "") or "") + len(
+            existing.get("document_url", "") or ""
+        )
+        if row_score > existing_score:
             seen[row_key] = row
     return list(seen.values())
+
+
+def _existing_hash_set(client: Client, table: str, hashes: list[str]) -> set[str]:
+    found: set[str] = set()
+    chunk_size = 100
+    for offset in range(0, len(hashes), chunk_size):
+        chunk = hashes[offset : offset + chunk_size]
+        result = (
+            client.table(table)
+            .select("content_hash")
+            .in_("content_hash", chunk)
+            .execute()
+        )
+        for row in result.data or []:
+            found.add(row["content_hash"])
+    return found
+
 
 # Tables live in public schema (mn_ prefix) for reliable PostgREST access.
 TABLE_TICKERS = "mn_tickers"
@@ -129,9 +153,9 @@ class SupabaseStore:
                     "ticker": item.ticker,
                     "event_type": item.event_type,
                     "event_date_raw": item.event_date,
-                    "details": item.details,
-                    "date_label": item.date_label,
-                    "document_url": item.document_url,
+                    "details": item.details or "",
+                    "date_label": item.date_label or "",
+                    "document_url": item.document_url or "",
                     "last_seen_at": datetime.now(timezone.utc).isoformat(),
                 }
                 for item in items
@@ -139,16 +163,17 @@ class SupabaseStore:
             key="content_hash",
         )
 
-        before = self._count_hashes(TABLE_CORP, [row["content_hash"] for row in rows])
+        hashes = [row["content_hash"] for row in rows]
+        existing = _existing_hash_set(self.client, TABLE_CORP, hashes)
+        inserted = sum(1 for row in rows if row["content_hash"] not in existing)
+        updated = len(rows) - inserted
+
+        # Always use SQL upsert so enrichment fields overwrite empty older rows.
         for offset in range(0, len(rows), UPSERT_CHUNK_SIZE):
             chunk = rows[offset : offset + UPSERT_CHUNK_SIZE]
-            self.client.table(TABLE_CORP).upsert(
-                chunk,
-                on_conflict="content_hash",
-                ignore_duplicates=False,
-            ).execute()
-        inserted = max(len(rows) - before, 0)
-        return inserted, len(rows) - inserted
+            self.client.rpc("mn_upsert_corporate_actions", {"rows": chunk}).execute()
+
+        return inserted, updated
 
     def apply_retention(self, days: int = RETENTION_DAYS) -> int:
         result = self.client.rpc(RPC_PURGE, {"retention_days": days}).execute()
@@ -170,20 +195,7 @@ class SupabaseStore:
         self.client.table(TABLE_TICKERS).upsert(rows, on_conflict="symbol").execute()
 
     def _count_hashes(self, table: str, hashes: list[str]) -> int:
-        if not hashes:
-            return 0
-        total = 0
-        chunk_size = 100
-        for offset in range(0, len(hashes), chunk_size):
-            chunk = hashes[offset : offset + chunk_size]
-            result = (
-                self.client.table(table)
-                .select("content_hash")
-                .in_("content_hash", chunk)
-                .execute()
-            )
-            total += len(result.data or [])
-        return total
+        return len(_existing_hash_set(self.client, table, hashes))
 
 
 def snapshots_to_items(
